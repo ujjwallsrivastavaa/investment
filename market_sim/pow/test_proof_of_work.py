@@ -14,3 +14,4 @@ def test_pow_invalid_nonce():
     data = "test_trade"
     bad_nonce = 0
     assert not pow.validate(data, bad_nonce)
+    print("Invalid nonce correctly rejected.")

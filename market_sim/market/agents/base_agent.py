@@ -8,6 +8,7 @@ from decimal import Decimal
 from datetime import datetime
 from core.models.base import Order, Trade, Position, OrderSide, OrderType, OrderStatus
 from core.utils.time_utils import utc_now
+from market_sim.pow.proof_of_work import ProofOfWork
 
 class BaseAgent(ABC):
     def __init__(self, agent_id: str, initial_balance: Decimal):
@@ -17,6 +18,7 @@ class BaseAgent(ABC):
         self.orders: Dict[str, Order] = {}  # order_id -> Order
         self.trades: List[Trade] = []
         self.last_update = utc_now()
+        self.pow = ProofOfWork(difficulty_bits=18)
         
     @abstractmethod
     def on_order_book_update(self, symbol: str, bids: List[tuple], asks: List[tuple]) -> None:
@@ -55,6 +57,10 @@ class BaseAgent(ABC):
     def create_market_order(self, symbol: str, side: OrderSide, quantity: Decimal) -> Order:
         """Create a market order."""
         order = Order.create_market_order(symbol, side, quantity, self.agent_id)
+        data = f"{order.symbol}|{order.side}|{order.quantity}|{order.created_at}|{self.agent_id}"
+        nonce, hash_val, elapsed = self.pow.mine(data)
+        order.pow_nonce = nonce
+        order.pow_hash = hash_val
         self.orders[str(order.id)] = order
         return order
     
@@ -62,6 +68,10 @@ class BaseAgent(ABC):
                           price: Decimal) -> Order:
         """Create a limit order."""
         order = Order.create_limit_order(symbol, side, quantity, price, self.agent_id)
+        data = f"{order.symbol}|{order.side}|{order.quantity}|{order.price}|{order.created_at}|{self.agent_id}"
+        nonce, hash_val, elapsed = self.pow.mine(data)
+        order.pow_nonce = nonce
+        order.pow_hash = hash_val
         self.orders[str(order.id)] = order
         return order
     

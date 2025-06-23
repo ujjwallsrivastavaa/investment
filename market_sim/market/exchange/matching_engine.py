@@ -5,20 +5,28 @@ Matching engine for order execution.
 from typing import List, Optional, Tuple
 from decimal import Decimal
 from datetime import datetime
-from core.models.base import Order, Trade, OrderBook, OrderSide, OrderStatus, OrderType
-from core.utils.time_utils import utc_now
+from market_sim.core.models.base import Order, Trade, OrderBook, OrderSide, OrderStatus, OrderType
+from market_sim.core.utils.time_utils import utc_now
+from market_sim.pow.proof_of_work import ProofOfWork
 
 class MatchingEngine:
     def __init__(self, symbol: str):
         self.order_book = OrderBook.create(symbol)
         self.trades: List[Trade] = []
-        
+        self.pow = ProofOfWork(difficulty_bits=18)
+
     def process_order(self, order: Order) -> List[Trade]:
-        """Process an incoming order and generate trades."""
-        if order.type == OrderType.MARKET:
-            return self._process_market_order(order)
-        else:
-            return self._process_limit_order(order)
+        # Validate PoW
+        if order.type in (OrderType.MARKET, OrderType.LIMIT):
+            if order.pow_nonce is None or order.pow_hash is None:
+                raise ValueError("Order missing PoW fields")
+            # Compose data string as in agent
+            if hasattr(order, 'price'):
+                data = f"{order.symbol}|{order.side}|{order.quantity}|{order.price}|{order.created_at}|{order.agent_id}"
+            else:
+                data = f"{order.symbol}|{order.side}|{order.quantity}|{order.created_at}|{order.agent_id}"
+            if not self.pow.validate(data, order.pow_nonce):
+                raise ValueError("Invalid PoW for order")
     
     def _process_market_order(self, order: Order) -> List[Trade]:
         """Process a market order."""

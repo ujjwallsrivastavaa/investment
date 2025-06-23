@@ -8,8 +8,8 @@ from decimal import Decimal
 from enum import Enum
 from typing import Optional, List, Dict, Union
 from uuid import UUID, uuid4
-from core.utils.time_utils import utc_now
-from core.utils.time_utils import utc_now
+from market_sim.core.utils.time_utils import utc_now
+from market_sim.core.utils.time_utils import utc_now
 
 class OrderType(Enum):
     MARKET = "market"
@@ -44,6 +44,8 @@ class Order:
     created_at: datetime
     updated_at: datetime
     agent_id: str
+    pow_nonce: Optional[int] = None
+    pow_hash: Optional[str] = None
     
     @classmethod
     def create_market_order(cls, symbol: str, side: OrderSide, quantity: Decimal, agent_id: str) -> 'Order':
